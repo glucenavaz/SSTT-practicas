@@ -22,14 +22,14 @@ def start_server():
     # El servidor pasa a estado pasivo esperando clientes.
     server_socket.listen(64)
     
-    print(f"Servidor escuchando en {HOST}:{PORT}...")
+    print("Servidor escuchando en {}:{}...".format(HOST, PORT))
 
     while True:
         # 4. Aceptar conexión (Accept)
         # Se bloquea hasta que llega un cliente (3-way handshake).
         # Retorna un NUEVO socket (client_socket) dedicado a este cliente y su dirección.
         client_socket, client_addr = server_socket.accept()
-        print(f"Conexión establecida con: {client_addr}")
+        print("Conexión establecida con: {}".format(client_addr))
 
         # 5. Recibir datos (Recv)
         # Leemos del socket del cliente. 1024 es el buffer_size.
@@ -37,7 +37,7 @@ def start_server():
         
         # Los datos llegan en binario, hay que decodificarlos para verlos como string
         mensaje_cliente = data.decode()
-        print(f"Mensaje recibido:\n{mensaje_cliente}")
+        print("Mensaje recibido:\n{}".format(mensaje_cliente))
 
         # 6. Enviar respuesta (Send)
         # Como es un servidor HTTP simple, debemos enviar una cabecera HTTP válida.

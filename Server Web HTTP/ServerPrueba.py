@@ -1,7 +1,7 @@
 import socket
 
 # Configuración del servidor
-HOST = '127.0.0.1'  # localhost
+HOST = '0.0.0.0'  # localhost
 PORT = 8080         # Puerto de escucha
 
 def start_server():

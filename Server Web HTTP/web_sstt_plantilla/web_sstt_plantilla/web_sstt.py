@@ -34,20 +34,25 @@ def enviar_mensaje(cs, data):
     """ Esta función envía datos (data) a través del socket cs
         Devuelve el número de bytes enviados.
     """
-    pass
+    # Convertimos a bytes si es necesario
+    if type(data) == str:
+        data = data.encode()
+    return cs.send(data)
 
 
 def recibir_mensaje(cs):
     """ Esta función recibe datos a través del socket cs
         Leemos la información que nos llega. recv() devuelve un string con los datos.
     """
-    pass
+    # Leemos hasta BUFSIZE bytes
+    data = cs.recv(BUFSIZE)
+    return data.decode()    # Devolvemos el string decodificado
 
 
 def cerrar_conexion(cs):
     """ Esta función cierra una conexión activa.
     """
-    pass
+    cs.close()
 
 
 def process_cookies(headers,  cs):
@@ -96,6 +101,19 @@ def process_web_request(cs, webroot):
             * Si es por timeout, se cierra el socket tras el período de persistencia.
                 * NOTA: Si hay algún error, enviar una respuesta de error con una pequeña página HTML que informe del error.
     """
+    """ Procesamiento temporal para probar la conexión """
+    # 1. Leemos el mensaje (aunque no lo procesemos aún)
+    data = recibir_mensaje(cs)
+    logger.info("Datos recibidos del cliente")
+
+    # 2. Preparamos una respuesta HTTP simple
+    # OJO: Las cabeceras HTTP son estrictas.
+    http_response = "HTTP/1.1 200 OK\r\n\r\nHola! Soy el servidor web_sstt funcionando con procesos."
+
+    # 3. Enviamos
+    enviar_mensaje(cs, http_response)
+    
+    # El cierre del socket se hace en el main (hijo) después de llamar a esta función
 
 
 def main():
@@ -136,8 +154,51 @@ def main():
 
             - Si es el proceso padre cerrar el socket que gestiona el hijo.
         """
+        # 1. Crear el socket TCP (IPv4, Stream)
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        # 2. Permitir reusar la dirección
+        server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+        # 3. Vincular a IP y Puerto (Bind) usando los argumentos
+        server_socket.bind((args.host, args.port))
+
+        # 4. Escuchar conexiones (Listen)
+        server_socket.listen(MAX_ACCESOS)
+
+        # 5. Bucle infinito para aceptar clientes
+        while True:
+            # Aceptar conexión
+            client_socket, client_addr = server_socket.accept()
+            logger.info("Conexión entrante de: {}".format(client_addr))
+
+            # --- GESTIÓN DE PROCESOS (FORK)  ---
+            pid = os.fork()
+
+            if pid == 0:
+                # PROCESO HIJO
+                # El hijo no necesita el socket que escucha peticiones, solo el del cliente
+                server_socket.close()
+
+                # Procesamos la petición web
+                process_web_request(client_socket, args.webroot)
+
+                # Al terminar, cerramos la conexión y matamos al proceso hijo
+                cerrar_conexion(client_socket)
+                sys.exit(0)
+            
+            else:
+                # PROCESO PADRE
+                # El padre sigue escuchando, no necesita el socket del cliente actual
+                client_socket.close()
+
+
     except KeyboardInterrupt:
-        True
+        logger.info("Servidor detenido por el usuario.")
+        try:
+            server_socket.close()
+        except:
+            pass
 
 if __name__== "__main__":
     main()

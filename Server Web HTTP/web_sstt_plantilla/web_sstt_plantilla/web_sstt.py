@@ -21,7 +21,7 @@ MAX_ACCESOS = 10
 
 # Extensiones admitidas (extension, name in HTTP)
 filetypes = {"gif":"image/gif", "jpg":"image/jpg", "jpeg":"image/jpeg", "png":"image/png", "htm":"text/htm", 
-             "html":"text/html", "css":"text/css", "js":"text/js"}
+            "html":"text/html", "css":"text/css", "js":"text/js"}
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO,
@@ -70,29 +70,49 @@ def process_web_request(cs, webroot):
     """ Procesamiento principal de los mensajes recibidos.
         Típicamente se seguirá un procedimiento similar al siguiente (aunque el alumno puede modificarlo si lo desea)
 
-        * Bucle para esperar hasta que lleguen datos en la red a través del socket cs con select()
+        * Bucle para esperar hasta que lleguen datos en la red a través del socket cs con select()*"""
+    
+    while(not comprobacion):
+        comprobacion = False
 
-            * Se comprueba si hay que cerrar la conexión por exceder TIMEOUT_CONNECTION segundos
-              sin recibir ningún mensaje o hay datos. Se utiliza select.select
+        data = recibir_mensaje(cs)
+
+        """ PROCESAR """
+
+
+
+        response = ""
+
+        enviar_mensaje(cs, response)
+
+        recibido = select([cs],[],[],TIMEOUT_CONNECTION)
+
+        if(recibido == []):
+            vacio = True
+    
+
+
+    """* Se comprueba si hay que cerrar la conexión por exceder TIMEOUT_CONNECTION segundos
+            sin recibir ningún mensaje o hay datos. Se utiliza select.select
 
             * Si no es por timeout y hay datos en el socket cs.
                 * Leer los datos con recv.
                 * Analizar que la línea de solicitud y comprobar está bien formateada según HTTP 1.1
                     * Devuelve una lista con los atributos de las cabeceras.
                     * Comprobar si la versión de HTTP es 1.1
-                    * Comprobar si es un método GET o POST. Si no devolver un error Error 405 "Method Not Allowed".
-                    * Leer URL y eliminar parámetros si los hubiera
+                    * Comprobar si es un método GET. Si no devolver un error Error 405 "Method Not Allowed".
+                    * Leer URL y eliminar parámetros si los hubiera (imagen u otra cosa, solo devolver index.html)
                     * Comprobar si el recurso solicitado es /, En ese caso el recurso es index.html
                     * Construir la ruta absoluta del recurso (webroot + recurso solicitado)
                     * Comprobar que el recurso (fichero) existe, si no devolver Error 404 "Not found"
                     * Analizar las cabeceras. Imprimir cada cabecera y su valor. Si la cabecera es Cookie comprobar
-                      el valor de cookie_counter para ver si ha llegado a MAX_ACCESOS.
-                      Si se ha llegado a MAX_ACCESOS devolver un Error "403 Forbidden"
+                    el valor de cookie_counter para ver si ha llegado a MAX_ACCESOS.
+                    Si se ha llegado a MAX_ACCESOS devolver un Error "403 Forbidden"
                     * Obtener el tamaño del recurso en bytes.
                     * Extraer extensión para obtener el tipo de archivo. Necesario para la cabecera Content-Type
                     * Preparar respuesta con código 200. Construir una respuesta que incluya: la línea de respuesta y
-                      las cabeceras Date, Server, Connection, Set-Cookie (para la cookie cookie_counter),
-                      Content-Length y Content-Type.
+                    las cabeceras Date, Server, Connection, Set-Cookie (para la cookie cookie_counter),
+                    Content-Length y Content-Type.
                     * Leer y enviar el contenido del fichero a retornar en el cuerpo de la respuesta.
                     * Se abre el fichero en modo lectura y modo binario
                         * Se lee el fichero en bloques de BUFSIZE bytes (8KB)
@@ -102,19 +122,6 @@ def process_web_request(cs, webroot):
                 * NOTA: Si hay algún error, enviar una respuesta de error con una pequeña página HTML que informe del error.
     """
     """ Procesamiento temporal para probar la conexión """
-    # 1. Leemos el mensaje (aunque no lo procesemos aún)
-    data = recibir_mensaje(cs)
-    logger.info("Datos recibidos del cliente")
-
-    # 2. Preparamos una respuesta HTTP simple
-    # OJO: Las cabeceras HTTP son estrictas.
-    http_response = "HTTP/1.1 200 OK\r\n\r\nHola! Soy el servidor web_sstt funcionando con procesos."
-
-    # 3. Enviamos
-    enviar_mensaje(cs, http_response)
-    
-    # El cierre del socket se hace en el main (hijo) después de llamar a esta función
-
 
 def main():
     """ Función principal del servidor
@@ -180,9 +187,18 @@ def main():
                 # El hijo no necesita el socket que escucha peticiones, solo el del cliente
                 server_socket.close()
 
-                # Procesamos la petición web
+                # 1. Leemos el mensaje (aunque no lo procesemos aún)
+                data = recibir_mensaje(client_socket)
+                logger.info("Datos recibidos del cliente")
                 process_web_request(client_socket, args.webroot)
 
+                # 2. Preparamos una respuesta HTTP simple
+                # OJO: Las cabeceras HTTP son estrictas.
+                http_response = "HTTP/1.1 200 OK\r\n\r\nHola! Soy el servidor web_sstt funcionando con procesos."
+
+                # 3. Enviamos
+                enviar_mensaje(client_socket, http_response)
+    
                 # Al terminar, cerramos la conexión y matamos al proceso hijo
                 cerrar_conexion(client_socket)
                 sys.exit(0)

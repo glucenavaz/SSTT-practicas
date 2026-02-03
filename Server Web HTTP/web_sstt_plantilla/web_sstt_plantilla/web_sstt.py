@@ -71,9 +71,8 @@ def process_web_request(cs, webroot):
         Típicamente se seguirá un procedimiento similar al siguiente (aunque el alumno puede modificarlo si lo desea)
 
         * Bucle para esperar hasta que lleguen datos en la red a través del socket cs con select()*"""
-    
+    comprobacion = False
     while(not comprobacion):
-        comprobacion = False
 
         data = recibir_mensaje(cs)
 
@@ -88,7 +87,7 @@ def process_web_request(cs, webroot):
         recibido = select([cs],[],[],TIMEOUT_CONNECTION)
 
         if(recibido == []):
-            vacio = True
+            comprobacion = True
     
 
 

@@ -78,7 +78,25 @@ def process_web_request(cs, webroot):
 
         """ PROCESAR """
 
+        lineas = data.split('\r\n', 1) 
+        request_line = lineas[0]
 
+        partes = request_line.split(' ') 
+
+        if len(partes) == 3:
+            method = partes[0]  # GET
+            url = partes[1]  # index.html
+            version = partes[2] # 1.1
+        else:
+            print("Error: La línea de petición no tiene el formato correcto")
+
+        er_method = r"^[A-Z]+$"
+
+        er_url = r"^\S+$"
+
+        er_version = r"^HTTP/\d\.\d$"
+
+        # HACER EL MATCH
 
         response = ""
 

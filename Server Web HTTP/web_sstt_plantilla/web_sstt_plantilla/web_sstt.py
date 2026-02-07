@@ -7,7 +7,7 @@ import select
 import types        # Para definir el tipo de datos data
 import argparse     # Leer parametros de ejecución
 import os           # Obtener ruta y extension
-from datetime import datetime, timedelta # Fechas de los mensajes HTTP
+from datetime import datetime, timedelta, timezone # Fechas de los mensajes HTTP
 import time         # Timeout conexión
 import sys          # sys.exit
 import re           # Analizador sintáctico
@@ -63,7 +63,43 @@ def process_cookies(headers,  cs):
         4. Si se encuentra y tiene el valor MAX_ACCESSOS se devuelve MAX_ACCESOS
         5. Si se encuentra y tiene un valor 1 <= x < MAX_ACCESOS se incrementa en 1 y se devuelve el valor
     """
-    pass
+    nombre_cookie = "cookie_counter_65YY"   #Edu cuando puedas pon en YY los 2 ultimos digitos de tu DNI
+
+    # Se analizan las cabeceras en headers para buscar la cabecera Cookie
+    for linea in headers:
+        if linea.startswith("Cookie:"):
+            # Obtenemos el contenido de la cabecera
+            cookie_header_content = linea.split(":", 1)[1].strip()
+
+            # Separamos las cookies individuales
+            cookies = cookie_header_content.split(";")
+
+            for cookie in cookies:
+                # Una vez encontrada una cabecera Cookie se comprueba si el valor es cookie_counter
+                if "=" in cookie:
+                    key, value = cookie.split("=", 1)
+                    key = key.strip()
+                    value = value.strip()
+
+                    # Comprobamos si es la cookie que buscamos
+                    if key == nombre_cookie:
+                        try:
+                            # Intentamos convertir el valor a entero
+                            val = int(value)
+                            
+                            # Si se encuentra y tiene el valor MAX_ACCESOS se devuelve MAX_ACCESOS
+                            if val >= MAX_ACCESOS:
+                                return MAX_ACCESOS
+                            
+                            # Si se encuentra y tiene un valor 1 <= x < MAX_ACCESOS se incrementa en 1 y se devuelve el valor
+                            if 1 <= val < MAX_ACCESOS:
+                                val += 1
+                                return val
+                        except ValueError:
+                            return 1
+    
+    # Si no se encuentra cookie_counter , se devuelve 1
+    return 1
 
 
 def process_web_request(cs, webroot):
@@ -72,40 +108,101 @@ def process_web_request(cs, webroot):
 
         * Bucle para esperar hasta que lleguen datos en la red a través del socket cs con select()*"""
     comprobacion = False
-    while(not comprobacion):
+    while not comprobacion:
 
         data = recibir_mensaje(cs)
 
+        # Si el cliente cierra la conexión prematuramente (recv devuelve vacío), salimos forzosamente
+        if not data:
+            logger.info("El cliente cerró la conexión (TCP FIN).")
+            break
+
         """ PROCESAR """
+        logger.info("Petición recibida:\n{}".format(data))
 
         lineas = data.split('\r\n', 1) 
         request_line = lineas[0]
 
-        partes = request_line.split(' ') 
+        partes = request_line.split(' ')
+        method = ""
+        url= ""
+        version= ""
+        request_valida = False
 
         if len(partes) == 3:
             method = partes[0]  # GET
             url = partes[1]  # index.html
             version = partes[2] # 1.1
+
+            er_method = r"^GET$"        #Cambiado [A-Z]+ por GET ya que solo nos piden el método GET
+            er_url = r"^\S+$"
+            er_version = r"^HTTP/1\.1$" #Debe ser 1.1
+
+            # HACEMOS EL MATCH
+            if (re.fullmatch(er_method, method) and 
+                re.fullmatch(er_url, url) and 
+                re.fullmatch(er_version, version)):
+                request_valida = True
+
         else:
             print("Error: La línea de petición no tiene el formato correcto")
 
-        er_method = r"^[A-Z]+$"
+        # SI LA PETICIÓN ES VÁLIDA (Cumple formato HTTP 1.1 y GET)
+        if request_valida:
+            # Leer URL y eliminar parámetros si los hubiera
+            if "?" in url:
+                url = url.split("?")[0]
+            
+            # Comprobar si el recurso solicitado es /, en ese caso el recurso es index.html
+            if url == "/":
+                url = "/index.html"
+            
+            # Construir la ruta absoluta del recurso (webroot + recurso solicitado)
+            filepath = os.path.join(webroot, url.lstrip("/"))
 
-        er_url = r"^\S+$"
+            # Comprobar que el fichero existe, si no devolver Error 404 "Not found"
+            if not os.path.isfile(filepath):
+                # ERROR 404
+                logger.warning("Fichero no encontrado: {}".format(filepath))
+                error_msg = "<h1>404 Not Found</h1><p>El recurso no existe.</p>"
 
-        er_version = r"^HTTP/\d\.\d$"
+                # Construccion cabecera:
+                # Linea de estado
+                header = "HTTP/1.1 404 Not Found\r\n"
+                # Fecha (según RFC de HTTP 1.1):
+                header += "Date: {}\r\n".format(datetime.now(timezone.utc).strftime('%a, %d %b %Y %H:%M:%S GMT'))
+                # Nombre del servidor:
+                header += "Server: SSTT\r\n"
+                # Content-length:
+                header += "Content-Length: {}\r\n".format(len(error_msg))
+                # Conexion:
+                header += "Connection: keep-alive\r\n"
+                # Content-type:
+                header += "Content-Type: text/html\r\n"
 
-        # HACER EL MATCH
+                # Linea vacia:
+                header += "\r\n"
 
-        response = ""
+                enviar_mensaje(cs, header.encode() + error_msg.encode())
+            else:
+                # El fichero existe, seguimos procesando el mensaje
+                # Analizamos las cabeceras. Imprimimos cada cabecera y su valor.
 
-        enviar_mensaje(cs, response)
 
-        recibido = select([cs],[],[],TIMEOUT_CONNECTION)
 
-        if(recibido == []):
-            comprobacion = True
+
+
+
+
+
+        #response = ""
+
+        #enviar_mensaje(cs, response)
+
+        #recibido = select([cs],[],[],TIMEOUT_CONNECTION)
+
+        #if(recibido == []):
+            #comprobacion = True
     
 
 

@@ -251,26 +251,32 @@ def process_web_request(cs, webroot):
                                         break
                                     cs.send(chunk)
 
-                        
+        else:
+            # ERROR 400 Bad Request (Si request_valida no es true)
+            error_msg = "<h1>400 Bad Request</h1>"
+            header = "HTTP/1.1 400 Bad Request\r\n"
+            header += "Content-Length: {}\r\n".format(len(error_msg))
+            header += "Connection: close\r\n\r\n"
+            enviar_mensaje(cs, header.encode() + error_msg.encode())
+            comprobacion = True
+
+        # Persistencia
+        if not comprobacion:
+            recibido, _, _ = select([cs], [], [], TIMEOUT_CONNECTION)
+
+            if not recibido:
+                # Si recibido está vacío, significa que ha saltado el TIMEOUT
+                logger.info("Timeout de persistencia alcanzado. Cerrando.")
+                comprobacion = True
+            
+            # Si recibido tiene datos, el bucle while se repite 
+            # y el 'recibir_mensaje' del principio leerá la nueva petición inmediatamente.
 
 
-
-
-
-
-
-        #response = ""
-
-        #enviar_mensaje(cs, response)
-
-        #recibido = select([cs],[],[],TIMEOUT_CONNECTION)
-
-        #if(recibido == []):
-            #comprobacion = True
     
 
 
-                        """* Se comprueba si hay que cerrar la conexión por exceder TIMEOUT_CONNECTION segundos
+    """* Se comprueba si hay que cerrar la conexión por exceder TIMEOUT_CONNECTION segundos
             sin recibir ningún mensaje o hay datos. Se utiliza select.select
 
             * Si no es por timeout y hay datos en el socket cs.
@@ -364,7 +370,6 @@ def main():
                 # PROCESO HIJO
                 server_socket.close()
 
-                # --- CORRECCIÓN: Borramos la lectura previa ---
                 # Delegamos TODA la responsabilidad a la función
                 process_web_request(client_socket, args.webroot)
     

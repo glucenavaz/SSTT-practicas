@@ -185,9 +185,73 @@ def process_web_request(cs, webroot):
 
                 enviar_mensaje(cs, header.encode() + error_msg.encode())
             else:
-                # El fichero existe, seguimos procesando el mensaje
-                # Analizamos las cabeceras. Imprimimos cada cabecera y su valor.
+                    # El fichero existe, seguimos procesando
+                    
+                    # 1. Extraer y Analizar las cabeceras (Headers)
+                    # Si hay contenido después de la primera línea, lo troceamos por saltos de línea
+                    headers_list = lineas[1].split('\r\n') if len(lineas) > 1 else []
+                    
+                    logger.info("--- Cabeceras recibidas ---")
+                    for h in headers_list:
+                        if h: # Si la línea no está vacía, la imprimimos
+                            logger.info(h)
+                    
+                    # 2. Gestión de Cookies
+                    # Inicializamos a 1 por defecto (para imágenes u otros recursos)
+                    cookie_val = 1 
+                    
+                    # El enunciado dice: "El valor variará solo para cada petición... al recurso index.html"
+                    if url == "/index.html":
+                        cookie_val = process_cookies(headers_list, cs)
 
+                    # Ahora cookie_val tiene el número de visita actual o MAX_ACCESOS (10)
+
+                    #ERROR 403
+                    if cookie_val >= MAX_ACCESOS:
+                        logger.warning("Acceso denegado: Límite de cookies alcanzado")
+                        error_msg = "<h1>403 Forbidden</h1><p>Has superado el limite de accesos.</p>"
+                        
+                        header = "HTTP/1.1 403 Forbidden\r\n"
+                        header += "Date: {}\r\n".format(datetime.now(timezone.utc).strftime('%a, %d %b %Y %H:%M:%S GMT'))
+                        header += "Server: SSTT\r\n"
+                        header += "Content-Length: {}\r\n".format(len(error_msg))
+                        header += "Connection: close\r\n\r\n" # Cerramos conexión
+                        
+                        enviar_mensaje(cs, header.encode() + error_msg.encode())
+                        comprobacion = True # Forzamos salida del bucle
+
+                    else:
+                        # 4. ÉXITO (200 OK) - Servir el fichero
+                        file_size = os.path.getsize(filepath)
+                        filename, file_extension = os.path.splitext(filepath)
+                        extension = file_extension.lstrip(".")
+                        content_type = filetypes.get(extension, "application/octet-stream")
+
+                        # Construimos cabeceras 200 OK
+                        header = "HTTP/1.1 200 OK\r\n"
+                        header += "Date: {}\r\n".format(datetime.now(timezone.utc).strftime('%a, %d %b %Y %H:%M:%S GMT'))
+                        header += "Server: SSTT\r\n"
+                        header += "Content-Length: {}\r\n".format(file_size)
+                        header += "Content-Type: {}\r\n".format(content_type)
+                        
+                        if url == "/index.html":
+                        # Max-Age=30 segundos como pide el enunciado
+                            header += "Set-Cookie: cookie_counter_65YY={}; Max-Age=30\r\n".format(cookie_val)
+
+                            header += "Connection: keep-alive\r\n\r\n"
+
+                            # Enviamos cabeceras
+                            enviar_mensaje(cs, header)
+
+                            # 5. Enviar contenido del fichero por bloques
+                            with open(filepath, 'rb') as f:
+                                while True:
+                                    chunk = f.read(BUFSIZE)
+                                    if not chunk:
+                                        break
+                                    cs.send(chunk)
+
+                        
 
 
 
@@ -206,7 +270,7 @@ def process_web_request(cs, webroot):
     
 
 
-    """* Se comprueba si hay que cerrar la conexión por exceder TIMEOUT_CONNECTION segundos
+                        """* Se comprueba si hay que cerrar la conexión por exceder TIMEOUT_CONNECTION segundos
             sin recibir ningún mensaje o hay datos. Se utiliza select.select
 
             * Si no es por timeout y hay datos en el socket cs.
@@ -298,22 +362,13 @@ def main():
 
             if pid == 0:
                 # PROCESO HIJO
-                # El hijo no necesita el socket que escucha peticiones, solo el del cliente
                 server_socket.close()
 
-                # 1. Leemos el mensaje (aunque no lo procesemos aún)
-                data = recibir_mensaje(client_socket)
-                logger.info("Datos recibidos del cliente")
+                # --- CORRECCIÓN: Borramos la lectura previa ---
+                # Delegamos TODA la responsabilidad a la función
                 process_web_request(client_socket, args.webroot)
-
-                # 2. Preparamos una respuesta HTTP simple
-                # OJO: Las cabeceras HTTP son estrictas.
-                http_response = "HTTP/1.1 200 OK\r\n\r\nHola! Soy el servidor web_sstt funcionando con procesos."
-
-                # 3. Enviamos
-                enviar_mensaje(client_socket, http_response)
     
-                # Al terminar, cerramos la conexión y matamos al proceso hijo
+                # Al terminar (cuando process_web_request decida salir), cerramos
                 cerrar_conexion(client_socket)
                 sys.exit(0)
             

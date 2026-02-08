@@ -238,31 +238,40 @@ def process_web_request(cs, webroot):
                         # Max-Age=30 segundos como pide el enunciado
                             header += "Set-Cookie: cookie_counter_65YY={}; Max-Age=30\r\n".format(cookie_val)
 
-                            header += "Connection: keep-alive\r\n\r\n"
+                        header += "Connection: keep-alive\r\n\r\n"
 
-                            # Enviamos cabeceras
-                            enviar_mensaje(cs, header)
+                        # Enviamos cabeceras
+                        enviar_mensaje(cs, header)
 
                             # 5. Enviar contenido del fichero por bloques
-                            with open(filepath, 'rb') as f:
-                                while True:
-                                    chunk = f.read(BUFSIZE)
-                                    if not chunk:
-                                        break
-                                    cs.send(chunk)
+                        with open(filepath, 'rb') as f:
+                            while True:
+                                chunk = f.read(BUFSIZE)
+                                if not chunk:
+                                    break
+                                cs.send(chunk)
 
         else:
-            # ERROR 400 Bad Request (Si request_valida no es true)
-            error_msg = "<h1>400 Bad Request</h1>"
-            header = "HTTP/1.1 400 Bad Request\r\n"
-            header += "Content-Length: {}\r\n".format(len(error_msg))
-            header += "Connection: close\r\n\r\n"
-            enviar_mensaje(cs, header.encode() + error_msg.encode())
+            if len(partes) == 3 and re.fullmatch(er_version, version) and not re.fullmatch(er_method, method):
+                error_msg = "<h1>405 Method Not Allowed</h1><p>Metodo no permitido</p>"
+                header = "HTTP/1.1 405 Method Not Allowed\r\n"
+                header += "Allow: GET\r\n"
+                header += "Content-Length: {}\r\n".format(len(error_msg))
+                header += "Connection: close\r\n\r\n"
+                enviar_mensaje(cs, header.encode() + error_msg.encode())
+            else:
+                # 400 Bad Request
+                error_msg = "<h1>400 Bad Request</h1>"
+                header = "HTTP/1.1 400 Bad Request\r\n"
+                header += "Content-Length: {}\r\n".format(len(error_msg))
+                header += "Connection: close\r\n\r\n"
+                enviar_mensaje(cs, header.encode() + error_msg.encode())
+            
             comprobacion = True
 
         # Persistencia
         if not comprobacion:
-            recibido, _, _ = select([cs], [], [], TIMEOUT_CONNECTION)
+            recibido, _, _ = select.select([cs], [], [], TIMEOUT_CONNECTION)
 
             if not recibido:
                 # Si recibido está vacío, significa que ha saltado el TIMEOUT

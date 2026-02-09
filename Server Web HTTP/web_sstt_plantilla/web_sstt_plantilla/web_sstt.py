@@ -214,7 +214,8 @@ def process_web_request(cs, webroot):
                         header += "Connection: keep-alive\r\n\r\n"
 
                         # Enviamos cabeceras
-                        print(header)
+                        logger.info("CABECERAS ENVIADAS")
+                        logger.info("\n" + header)
                         enviar_mensaje(cs, header)
 
                             # Enviar contenido del fichero por bloques

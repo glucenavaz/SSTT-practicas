@@ -231,6 +231,7 @@ def process_web_request(cs, webroot):
                 header += "Allow: GET\r\n"
                 header += "Content-Length: {}\r\n".format(len(error_msg))
                 header += "Connection: close\r\n\r\n"
+                print("Método no permitido, solo se acepta GET")
                 enviar_mensaje(cs, header.encode() + error_msg.encode())
             else:
                 # 400 Bad Request

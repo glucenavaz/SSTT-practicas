@@ -16,7 +16,7 @@ import logging      # Para imprimir logs
 
 
 BUFSIZE = 8192 # Tamaño máximo del buffer que se puede utilizar
-TIMEOUT_CONNECTION = 20 # Timout para la conexión persistente
+TIMEOUT_CONNECTION = 29 # Timout para la conexión persistente - 6 + 5 + 3 + 5 + 10
 MAX_ACCESOS = 10
 
 # Extensiones admitidas (extension, name in HTTP)

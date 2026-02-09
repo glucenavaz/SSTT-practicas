@@ -122,7 +122,7 @@ def process_web_request(cs, webroot):
                 request_valida = True
 
         else:
-            print("Error: La línea de petición no tiene el formato correcto")
+            print("Error 400 (Bad request): La línea de petición no tiene el formato correcto")
 
         # Se comprueba si la petición es valida
         if request_valida:
@@ -214,6 +214,7 @@ def process_web_request(cs, webroot):
                         header += "Connection: keep-alive\r\n\r\n"
 
                         # Enviamos cabeceras
+                        print(header)
                         enviar_mensaje(cs, header)
 
                             # Enviar contenido del fichero por bloques
@@ -226,12 +227,12 @@ def process_web_request(cs, webroot):
 
         else:
             if len(partes) == 3 and re.fullmatch(er_version, version) and not re.fullmatch(er_method, method):
-                error_msg = "<h1>405 Method Not Allowed</h1><p>Metodo no permitido</p>"
+                error_msg = "405 Method Not Allowed. Metodo no permitido"
                 header = "HTTP/1.1 405 Method Not Allowed\r\n"
                 header += "Allow: GET\r\n"
                 header += "Content-Length: {}\r\n".format(len(error_msg))
                 header += "Connection: close\r\n\r\n"
-                print("Método no permitido, solo se acepta GET")
+                print("Error 405 (Method Not Allowed): Método no permitido, solo se acepta GET")
                 enviar_mensaje(cs, header.encode() + error_msg.encode())
             else:
                 # 400 Bad Request

@@ -229,7 +229,7 @@ def process_web_request(cs, webroot):
                         header += "Content-Type: {}\r\n".format(content_type)
                         
                         if url == "/index.html":
-                            header += "Set-Cookie: cookie_counter_65YY={}; Max-Age=30\r\n".format(cookie_val)
+                            header += "Set-Cookie: cookie_counter_6535={}; Max-Age=30\r\n".format(cookie_val)
 
                         header += "Connection: keep-alive\r\n"
                         header += "Keep-Alive: timeout={}, max=100\r\n\r\n".format(TIMEOUT_CONNECTION)

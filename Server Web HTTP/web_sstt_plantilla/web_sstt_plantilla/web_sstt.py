@@ -229,7 +229,7 @@ def process_web_request(cs, webroot):
                         if url == "/index.html":
                             header += "Set-Cookie: cookie_counter_65YY={}; Max-Age=30\r\n".format(cookie_val)
 
-                        header += "Connection: keep-alive\r\n\r\n"
+                        header += "Connection: keep-alive\r\n"
                         header += "Keep-Alive: timeout={}, max=100\r\n\r\n".format(TIMEOUT_CONNECTION)
 
                         # Enviamos cabeceras y elaviso del correo

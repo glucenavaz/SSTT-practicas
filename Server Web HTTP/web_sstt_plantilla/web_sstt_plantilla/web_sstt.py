@@ -142,11 +142,13 @@ def process_web_request(cs, webroot):
             if "?" in url:
                 ruta_base, params = url.split("?",1)
                 url = ruta_base     #Nos quedamos con la ruta limpia para buscar el fichero
-
-                if "email=pruebas@um.es" in params:
+                params = params.replace("%40", "@")
+                regex_correo = r"email=[a-z]([a-z.]*[a-z])?@um\.es"
+                if re.search(regex_correo, params):
                     mensaje_email = b"<h1>Correo Correcto</h1><p>Bienvenido estudiante.</p>"
                 elif "email=" in params:
-                    mensaje_email = b"<h1>Correo Erroneo</h1><p>Usuario no reconocido.</p>"
+                    # Si mandó el parámetro email pero no cumple el patrón:
+                    mensaje_email = b"<h1>Correo Erroneo</h1><p>El correo debe ser valido, en minusculas y pertenecer al dominio @um.es.</p>"
             
             # Comprobar si el recurso solicitado es /, en ese caso el recurso es index.html
             if url == "/":

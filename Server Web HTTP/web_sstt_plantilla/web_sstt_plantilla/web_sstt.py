@@ -121,14 +121,32 @@ def process_web_request(cs, webroot):
                 re.fullmatch(er_version, version)):
                 request_valida = True
 
+                tiene_host = False
+                headers_block = lineas[1].split('\r\n') if len(lineas) > 1 else []
+                for h in headers_block:
+                    if h.lower().startswith("host:"):
+                        tiene_host = True
+                        break
+                if tiene_host:
+                    request_valida = True
+                else:
+                    logger.error("Error: falta cabecera Host")
+
         else:
             print("Error 400 (Bad request): La línea de petición no tiene el formato correcto")
 
         # Se comprueba si la petición es valida
         if request_valida:
+            mensaje_email = b""
             # Leer URL y eliminar parámetros si los hubiera
             if "?" in url:
-                url = url.split("?")[0]
+                ruta_base, params = url.split("?",1)
+                url = ruta_base     #Nos quedamos con la ruta limpia para buscar el fichero
+
+                if "email=pruebas@um.es" in params:
+                    mensaje_email = b"<h1>Correo Correcto</h1><p>Bienvenido estudiante.</p>"
+                elif "email=" in params:
+                    mensaje_email = b"<h1>Correo Erroneo</h1><p>Usuario no reconocido.</p>"
             
             # Comprobar si el recurso solicitado es /, en ese caso el recurso es index.html
             if url == "/":
@@ -205,18 +223,17 @@ def process_web_request(cs, webroot):
                         header = "HTTP/1.1 200 OK\r\n"
                         header += "Date: {}\r\n".format(datetime.now(timezone.utc).strftime('%a, %d %b %Y %H:%M:%S GMT'))
                         header += "Server: SSTT\r\n"
-                        header += "Content-Length: {}\r\n".format(file_size)
+                        header += "Content-Length: {}\r\n".format(file_size + len(mensaje_email))
                         header += "Content-Type: {}\r\n".format(content_type)
                         
                         if url == "/index.html":
                             header += "Set-Cookie: cookie_counter_65YY={}; Max-Age=30\r\n".format(cookie_val)
 
                         header += "Connection: keep-alive\r\n\r\n"
+                        header += "Keep-Alive: timeout={}, max=100\r\n\r\n".format(TIMEOUT_CONNECTION)
 
-                        # Enviamos cabeceras
-                        logger.info("CABECERAS ENVIADAS")
-                        logger.info("\n" + header)
-                        enviar_mensaje(cs, header)
+                        # Enviamos cabeceras y elaviso del correo
+                        enviar_mensaje(cs, header.encode() + mensaje_email)
 
                             # Enviar contenido del fichero por bloques
                         with open(filepath, 'rb') as f:

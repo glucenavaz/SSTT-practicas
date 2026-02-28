@@ -169,7 +169,7 @@ def process_web_request(cs, webroot):
                 # Fecha:
                 header += "Date: {}\r\n".format(datetime.now(timezone.utc).strftime('%a, %d %b %Y %H:%M:%S GMT'))
                 # Nombre del servidor:
-                header += "Server: SSTT\r\n"
+                header += "Server: web.organizacion6535.org\r\n"
                 # Content-length:
                 header += "Content-Length: {}\r\n".format(len(error_msg))
                 # Conexion:
@@ -207,7 +207,7 @@ def process_web_request(cs, webroot):
                         
                         header = "HTTP/1.1 403 Forbidden\r\n"
                         header += "Date: {}\r\n".format(datetime.now(timezone.utc).strftime('%a, %d %b %Y %H:%M:%S GMT'))
-                        header += "Server: SSTT\r\n"
+                        header += "Server: web.organizacion6535.org\r\n"
                         header += "Content-Length: {}\r\n".format(len(error_msg))
                         header += "Connection: close\r\n\r\n" # Cerramos conexión
                         
@@ -224,7 +224,7 @@ def process_web_request(cs, webroot):
                         # Construimos cabeceras 200 OK
                         header = "HTTP/1.1 200 OK\r\n"
                         header += "Date: {}\r\n".format(datetime.now(timezone.utc).strftime('%a, %d %b %Y %H:%M:%S GMT'))
-                        header += "Server: SSTT\r\n"
+                        header += "Server: web.organizacion6535.org\r\n"
                         header += "Content-Length: {}\r\n".format(file_size + len(mensaje_email))
                         header += "Content-Type: {}\r\n".format(content_type)
                         

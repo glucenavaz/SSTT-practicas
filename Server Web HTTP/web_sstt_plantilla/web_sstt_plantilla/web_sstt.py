@@ -47,7 +47,7 @@ def cerrar_conexion(cs):
     cs.close()
 
 
-def process_cookies(headers,  cs):
+def process_cookies(headers, is_index):
     nombre_cookie = "cookie_counter_6535"
 
     # Se analizan las cabeceras en headers para buscar la cabecera cookie
@@ -74,10 +74,12 @@ def process_cookies(headers,  cs):
                             if val >= MAX_ACCESOS:
                                 return MAX_ACCESOS
                             
-                            # Si se encuentra y tiene un valor 1 <= x < MAX_ACCESOS se incrementa en 1 y se devuelve el valor
-                            if 1 <= val < MAX_ACCESOS:
+                            # Si se encuentra, tiene un valor 1 <= x < MAX_ACCESOS 
+                            # y la petición es al index, se incrementa en 1
+                            if is_index and 1 <= val < MAX_ACCESOS:
                                 val += 1
-                                return val
+                                
+                            return val
                         except ValueError:
                             return 1
     
@@ -141,14 +143,13 @@ def process_web_request(cs, webroot):
             # Leer URL y eliminar parámetros si los hubiera
             if "?" in url:
                 ruta_base, params = url.split("?",1)
-                url = ruta_base     #Nos quedamos con la ruta limpia para buscar el fichero
+                url = ruta_base # Nos quedamos con la ruta limpia para buscar el fichero
                 params = params.replace("%40", "@")
-                regex_correo = r"email=[a-z]([a-z.]*[a-z])?@um\.es"
+                regex_correo = r"email=[a-z]([a-z.]*[a-z])?@organizacion6535\.org"
                 if re.search(regex_correo, params):
                     mensaje_email = b"<h1>Correo Correcto</h1><p>Bienvenido estudiante.</p>"
-                elif "email=" in params:
-                    # Si mandó el parámetro email pero no cumple el patrón:
-                    mensaje_email = b"<h1>Correo Erroneo</h1><p>El correo debe ser valido, en minusculas y pertenecer al dominio @um.es.</p>"
+                elif "email=" in params: # Si mandó el parámetro email pero no cumple el patrón:
+                    mensaje_email = b"<h1>Correo Erroneo</h1><p>El correo debe ser valido, en minusculas y pertenecer al dominio @organizacion6535.org.</p>"
             
             # Comprobar si el recurso solicitado es /, en ese caso el recurso es index.html
             if url == "/":
@@ -194,11 +195,9 @@ def process_web_request(cs, webroot):
                             logger.info(h)
                     
                     # Gestión de Cookies
-                    # Inicializamos a 1 por defecto para las imagenes
-                    cookie_val = 1 
-                    
-                    if url == "/index.html":
-                        cookie_val = process_cookies(headers_list, cs)
+                    # Comprobamos la cookie en todas las peticiones para bloquear el acceso si es necesario, 
+                    # pasando un booleano para indicar si es el index.html (y así decidir si incrementa)
+                    cookie_val = process_cookies(headers_list, url == "/index.html")
 
                     #ERROR 403
                     if cookie_val >= MAX_ACCESOS:

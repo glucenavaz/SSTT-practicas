@@ -1,0 +1,17 @@
+;
+; BIND reverse data file for 192.168.56.X network
+;
+$TTL	604800
+@	IN	SOA	servidor.nombreorganizacion6535.org. admin.nombreorganizacion6535.org. (
+			1		; Serial
+			604800		; Refresh
+			86400		; Retry
+			2419200		; Expire
+			604800 )	; Negative Cache TTL
+;
+@	IN	NS	servidor.nombreorganizacion6535.org.
+@	IN	NS	servidor2.nombreorganizacion6535.org.
+
+; Registros PIR (Punteros)
+102	IN	PTR	servidor.nombreorganizacion6535.org.
+103	IN	PTR	servidor2.nombreorganizacion6535.org.	
